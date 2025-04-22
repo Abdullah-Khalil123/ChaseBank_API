@@ -1,0 +1,47 @@
+Installation Steps
+
+Install dependencies
+npm install express cors bcryptjs jsonwebtoken @prisma/client
+npm install --save-dev nodemon prisma
+
+Configure Environment Variables
+Create a .env file in the root directory with the following:
+DATABASE_URL="postgresql://username:password@localhost:5432/bankingdb"
+JWT_SECRET="your-secret-key"
+JWT_EXPIRES_IN="30d"
+PORT=5000
+NODE_ENV="development"
+
+Initialize Prisma
+npx prisma generate
+
+Run Database Migrations
+npx prisma migrate dev --name init
+
+Start the Server
+npm start
+
+
+API Endpoints
+Authentication
+
+POST /api/auth/register - Register a new user
+POST /api/auth/login - Login user
+GET /api/auth/me - Get current user (requires authentication)
+
+Users
+
+GET /api/users - Get all users (admin only)
+POST /api/users - Create a new user (admin only)
+GET /api/users/:id - Get user by ID
+PATCH /api/users/:id - Update user (admin only)
+DELETE /api/users/:id - Delete user (admin only)
+GET /api/users/:id/transactions - Get user's transactions
+
+Transactions
+
+GET /api/transactions - Get all transactions
+POST /api/transactions - Create a new transaction (admin only)
+GET /api/transactions/:id - Get transaction by ID
+PATCH /api/transactions/:id - Update transaction (admin only)
+DELETE /api/transactions/:id - Delete transaction (admin only)

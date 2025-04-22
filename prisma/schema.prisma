@@ -1,0 +1,51 @@
+// File: prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String        @id @default(uuid())
+  name           String
+  email          String        @unique
+  password       String
+  phone          String?
+  address        String?
+  accountName    String        // Company/Business name (e.g., Abdullah PRODUCTS LLC)
+  accountType    String        // Account type (e.g., BUS COMPLETE CHK)
+  accountNumber  String?       // Account number (e.g., ...6032)
+  role           Boolean       @default(false) // true for admin
+  balance        Float         @default(0)
+  availableCredit Float        @default(0)
+  transactions   Transaction[]
+  statements     Statement[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Transaction {
+  id             String           @id @default(uuid())
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  description    String
+  amount         Float
+  type           TransactionType
+  date           DateTime         @default(now())
+  updatedBalance Float
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+
+enum TransactionType {
+  credit
+  debit
+  fee
+  ach
+  wire
+  other
+}
