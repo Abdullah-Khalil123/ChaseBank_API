@@ -6,8 +6,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "jest",
-    "migrate": "prisma migrate dev",
-    "seed": "node prisma/seed.js"
+    "migrate": "prisma migrate deploy",
+    "seed": "node prisma/seed.js",
+    "build": "npm run migrate && npm run seed && npm run start"
   },
   "author": "",
   "license": "ISC",
