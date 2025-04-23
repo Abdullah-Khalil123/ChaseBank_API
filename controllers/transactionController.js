@@ -401,7 +401,7 @@ exports.getTransactionsByUserId = async (req, res) => {
       where: {
         userId: userId,
       },
-      orderBy: { date: "desc" },
+      orderBy: { date: "asc" },
       skip,
       take: parseInt(limit),
     });
