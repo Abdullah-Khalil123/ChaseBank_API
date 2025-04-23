@@ -177,7 +177,7 @@ exports.updateTransaction = async (req, res) => {
     const { id } = req.params;
     const { description, amount, type, date } = req.body;
 
-    // Find transaction
+    // Find the transaction to update
     const transaction = await prisma.transaction.findUnique({
       where: { id },
     });
@@ -189,23 +189,107 @@ exports.updateTransaction = async (req, res) => {
       });
     }
 
-    // For simplicity, we're not recalculating all balances
-    // In a real-world app, you would need to recalculate all subsequent transactions
-    const updatedTransaction = await prisma.transaction.update({
-      where: { id },
-      data: {
-        description,
-        amount: amount !== undefined ? parseFloat(amount) : undefined,
-        type,
-        date: date ? new Date(date) : undefined,
-      },
+    // Get the user associated with the transaction
+    const user = await prisma.user.findUnique({
+      where: { id: transaction.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found",
+      });
+    }
+
+    // Recalculate balances
+    let newBalance = user.balance;
+    const allTransactions = await prisma.transaction.findMany({
+      where: { userId: user.id },
+      orderBy: { date: "asc" }, // Ensure transactions are sorted by date
+    });
+
+    let foundUpdatedTransaction = false;
+
+    // Loop through all transactions and recalculate their balances
+    for (let i = 0; i < allTransactions.length; i++) {
+      const tx = allTransactions[i];
+
+      // Update the specific transaction first if it's the one being updated
+      if (tx.id === id) {
+        const updatedAmount =
+          amount !== undefined ? parseFloat(amount) : tx.amount;
+        const updatedType = type !== undefined ? type : tx.type;
+        const updatedDate = date ? new Date(date) : tx.date;
+
+        // Update the transaction
+        await prisma.transaction.update({
+          where: { id: tx.id },
+          data: {
+            description:
+              description !== undefined ? description : tx.description,
+            amount: updatedAmount,
+            type: updatedType,
+            date: updatedDate,
+          },
+        });
+
+        // Recalculate balance for this transaction
+        if (
+          updatedType === "credit" ||
+          updatedType === "ach" ||
+          updatedType === "wire"
+        ) {
+          newBalance += updatedAmount;
+        } else if (updatedType === "debit" || updatedType === "fee") {
+          newBalance -= updatedAmount;
+        } else if (updatedType === "other") {
+          newBalance += updatedAmount; // Amount could be positive or negative
+        }
+
+        // Update balance in the updated transaction record
+        await prisma.transaction.update({
+          where: { id: tx.id },
+          data: {
+            updatedBalance: newBalance,
+          },
+        });
+
+        foundUpdatedTransaction = true;
+      }
+
+      // If the transaction has already been updated, recalculate subsequent balances
+      if (foundUpdatedTransaction && tx.id !== id) {
+        const amountToUpdate = tx.amount;
+        const updatedBalance =
+          tx.type === "credit" || tx.type === "ach" || tx.type === "wire"
+            ? newBalance + amountToUpdate
+            : tx.type === "debit" || tx.type === "fee"
+            ? newBalance - amountToUpdate
+            : newBalance + amountToUpdate; // 'other' type can be both positive or negative
+
+        // Update the balance of subsequent transactions
+        await prisma.transaction.update({
+          where: { id: tx.id },
+          data: {
+            updatedBalance: updatedBalance,
+          },
+        });
+
+        // Update newBalance for the next transaction
+        newBalance = updatedBalance;
+      }
+    }
+
+    // Update the user's balance in the database after recalculating all transactions
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { balance: newBalance },
     });
 
     res.status(200).json({
       status: "success",
-      data: {
-        transaction: updatedTransaction,
-      },
+      message: "Transaction updated and balances recalculated",
+      data: { transactionId: id, updatedBalance: newBalance },
     });
   } catch (error) {
     res.status(500).json({
