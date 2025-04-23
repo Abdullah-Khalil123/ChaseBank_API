@@ -1,8 +1,6 @@
 // File: prisma/seed.js
-const { PrismaClient } = require("@prisma/client");
+const { prisma } = require("../config/db");
 const bcrypt = require("bcryptjs");
-
-const prisma = new PrismaClient();
 
 // Configuration
 const NUM_USERS = 50; // Number of regular users to create
