@@ -16,6 +16,6 @@ router
   .route("/:id")
   .get(transactionController.getTransactionsByUserId)
   .patch(restrictTo(), transactionController.updateTransaction)
-  .delete(restrictTo(), transactionController.deleteTransaction);
+  .delete(transactionController.deleteTransaction);
 
 module.exports = router;
