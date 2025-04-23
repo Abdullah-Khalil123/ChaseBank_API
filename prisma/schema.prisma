@@ -39,6 +39,7 @@ model Transaction {
   updatedBalance Float
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
+  isPending      Boolean?
 }
 
 

@@ -120,73 +120,67 @@ exports.getTransactionById = async (req, res) => {
 
 // Create new transaction
 exports.createTransaction = async (req, res) => {
-  const { email, description, amount, type, date } = req.body;
+  const { email, description, amount, type, date, isPending } = req.body;
 
-  // Validate required fields
-  if (!email || !type) {
+  // Only email is required now
+  if (!email) {
     return res.status(400).json({
       status: "error",
-      message: "Email and transaction type are required",
+      message: "Email is required",
     });
   }
 
   try {
-    // Start a transaction to ensure data consistency
-    const result = await prisma.$transaction(async (prisma) => {
-      // Find user by email
-      const user = await prisma.user.findUnique({
-        where: { email },
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found",
       });
+    }
 
-      if (!user) {
-        throw new Error("User not found");
-      }
+    // Prepare transaction data with defaults for missing values
+    const transactionData = {
+      userId: user.id,
+      description: description || "Unnamed transaction", // Default description
+      amount: amount ? parseFloat(amount) : 0, // Default amount
+      type: type || "misc_credit", // Default type
+      date: date ? new Date(date) : new Date(), // Default to current date
+      isPending: isPending !== undefined ? Boolean(isPending) : false, // Default to false
+    };
 
-      // Validate and parse amount
-      const amountValue = parseFloat(amount);
-      if (isNaN(amountValue)) {
-        throw new Error("Invalid amount");
-      }
-
-      // Calculate updated balance
-      let updatedBalance = user.balance;
-
-      if (creditTypes.includes(type)) {
-        updatedBalance += amountValue;
-      } else if (debitTypes.includes(type)) {
-        updatedBalance -= amountValue;
-      } else if (otherTypes.includes(type)) {
-        updatedBalance += amountValue; // Could handle differently if needed
-      } else {
-        throw new Error("Invalid transaction type");
-      }
-
-      // Create transaction
-      const newTransaction = await prisma.transaction.create({
-        data: {
-          userId: user.id,
-          description,
-          amount: amountValue,
-          type,
-          date: date ? new Date(date) : new Date(),
-          updatedBalance,
-        },
+    // Validate amount if provided
+    if (amount !== undefined && isNaN(parseFloat(amount))) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid amount format",
       });
+    }
 
-      // Update user balance
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { balance: updatedBalance },
+    // Validate type if provided
+    if (
+      type &&
+      ![...creditTypes, ...debitTypes, ...otherTypes].includes(type)
+    ) {
+      return res.status(400).json({
+        status: "error",
+        message: "Invalid transaction type",
       });
+    }
 
-      return { newTransaction, updatedBalance, userId: user.id };
+    // Create transaction with prepared data
+    const newTransaction = await prisma.transaction.create({
+      data: transactionData,
     });
 
     res.status(201).json({
       status: "success",
       data: {
-        transaction: result.newTransaction,
-        updatedBalance: result.updatedBalance,
+        transaction: newTransaction,
       },
     });
   } catch (error) {
@@ -202,7 +196,7 @@ exports.createTransaction = async (req, res) => {
 exports.updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, amount, type, date } = req.body;
+    const { description, amount, type, date, isPending } = req.body;
 
     // Find the transaction to update
     const transaction = await prisma.transaction.findUnique({
@@ -216,74 +210,61 @@ exports.updateTransaction = async (req, res) => {
       });
     }
 
-    // Get the user associated with the transaction
-    const user = await prisma.user.findUnique({
-      where: { id: transaction.userId },
-    });
+    // Prepare update data - only include fields that were provided
+    const updateData = {};
 
-    if (!user) {
-      return res.status(404).json({
-        status: "error",
-        message: "User not found",
-      });
-    }
+    if (description !== undefined) updateData.description = description;
 
-    // Recalculate balance for this specific transaction
-    let newBalance = user.balance;
-
-    // Check if the transaction is being updated and adjust the balance
     if (amount !== undefined) {
       const updatedAmount = parseFloat(amount);
-      const updatedType = type || transaction.type; // Keep the same type if not updated
-      const updatedDate = date ? new Date(date) : transaction.date;
-
-      // Remove the old transaction amount from the balance first
-      if (creditTypes.includes(transaction.type)) {
-        newBalance -= transaction.amount;
-      } else if (debitTypes.includes(transaction.type)) {
-        newBalance += transaction.amount;
-      } else if (otherTypes.includes(transaction.type)) {
-        newBalance -= transaction.amount;
+      if (isNaN(updatedAmount)) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid amount format",
+        });
       }
-
-      // Now, add the new transaction amount to the balance
-      if (creditTypes.includes(updatedType)) {
-        newBalance += updatedAmount;
-      } else if (debitTypes.includes(updatedType)) {
-        newBalance -= updatedAmount;
-      } else if (otherTypes.includes(updatedType)) {
-        newBalance += updatedAmount; // Adjust according to custom logic
-      }
-
-      // Update the transaction
-      await prisma.transaction.update({
-        where: { id: transaction.id },
-        data: {
-          description: description || transaction.description,
-          amount: updatedAmount,
-          type: updatedType,
-          date: updatedDate,
-          updatedBalance: newBalance, // Update balance for this transaction
-        },
-      });
-
-      // Update user's balance with the new balance
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { balance: newBalance },
-      });
-
-      res.status(200).json({
-        status: "success",
-        message: "Transaction updated and balance recalculated",
-        data: { transactionId: id, updatedBalance: newBalance },
-      });
-    } else {
-      res.status(400).json({
-        status: "error",
-        message: "Amount is required for update",
-      });
+      updateData.amount = updatedAmount;
     }
+
+    if (type !== undefined) {
+      if (
+        type &&
+        ![...creditTypes, ...debitTypes, ...otherTypes].includes(type)
+      ) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid transaction type",
+        });
+      }
+      updateData.type = type;
+    }
+
+    if (date !== undefined) {
+      try {
+        updateData.date = new Date(date);
+      } catch (error) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid date format",
+        });
+      }
+    }
+
+    if (isPending !== undefined) {
+      updateData.isPending = Boolean(isPending);
+    }
+
+    // Update the transaction
+    const updatedTransaction = await prisma.transaction.update({
+      where: { id },
+      data: updateData,
+    });
+
+    res.status(200).json({
+      status: "success",
+      message: "Transaction updated",
+      data: { transaction: updatedTransaction },
+    });
   } catch (error) {
     res.status(500).json({
       status: "error",
@@ -310,37 +291,9 @@ exports.deleteTransaction = async (req, res) => {
       });
     }
 
-    // Start a transaction to ensure data consistency
-    await prisma.$transaction(async (prisma) => {
-      // Find user
-      const user = await prisma.user.findUnique({
-        where: { id: transaction.userId },
-      });
-
-      // Calculate updated balance
-      let updatedBalance = user.balance;
-
-      // Reverse the transaction effect
-      if (creditTypes.includes(transaction.type)) {
-        updatedBalance -= transaction.amount;
-      } else if (debitTypes.includes(transaction.type)) {
-        updatedBalance += transaction.amount;
-      } else if (otherTypes.includes(transaction.type)) {
-        updatedBalance -= transaction.amount;
-      } else {
-        throw new Error("Invalid transaction type");
-      }
-
-      // Delete transaction
-      await prisma.transaction.delete({
-        where: { id },
-      });
-
-      // Update user balance
-      await prisma.user.update({
-        where: { id: transaction.userId },
-        data: { balance: updatedBalance },
-      });
+    // Delete transaction
+    await prisma.transaction.delete({
+      where: { id },
     });
 
     res.status(204).json({
@@ -373,8 +326,6 @@ exports.getTransactionsByUserId = async (req, res) => {
       skip,
       take: parseInt(limit),
     });
-
-    // console.log("Transactions:", transactions);
 
     // Get total count for pagination
     const totalCount = await prisma.transaction.count({
