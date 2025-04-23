@@ -7,27 +7,14 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = [
-  "http://localhost:3000", // Localhost 3000
-  "http://localhost:5000", // Localhost 5000
-  "https://chase-bank-tau.vercel.app", // Vercel URL 1
-  "https://chase-admin-ivory.vercel.app", // Vercel URL 2
-];
-
-// Middleware
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true); // Allow the request
-      } else {
-        callback(new Error("Not allowed by CORS")); // Block the request
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE"], // Specify allowed HTTP methods
-    credentials: true, // Allow cookies to be included in cross-origin requests
+    origin: "*", // This will allow requests from any origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow the required HTTP methods
+    credentials: true, // Allow credentials (cookies, authorization headers)
   })
 );
+
 app.use(express.json());
 
 // Routes
