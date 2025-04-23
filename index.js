@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     origin: "*", // This will allow requests from any origin
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow the required HTTP methods
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Allow the required HTTP methods
     credentials: true, // Allow credentials (cookies, authorization headers)
   })
 );
