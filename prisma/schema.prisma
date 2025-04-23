@@ -11,20 +11,20 @@ datasource db {
 model User {
   id             String        @id @default(uuid())
   name           String
+  username       String        @unique
   email          String        @unique
   password       String
   phone          String?
   address        String?
-  accountName    String        // Company/Business name (e.g., Abdullah PRODUCTS LLC)
-  accountType    String        // Account type (e.g., BUS COMPLETE CHK)
+  accountName    String
+  accountType    String
   accountNumber  String?
-  role           Boolean       @default(false) // true for admin
+  role           Boolean       @default(false)
   balance        Float         @default(0)
   availableCredit Float        @default(0)
   transactions   Transaction[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-
   
 }
 

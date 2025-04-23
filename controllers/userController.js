@@ -90,6 +90,7 @@ exports.createUser = async (req, res) => {
   try {
     const {
       name,
+      username,
       email,
       password,
       phone,
@@ -102,15 +103,22 @@ exports.createUser = async (req, res) => {
       availableCredit,
     } = req.body;
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Check if user already exists (by username or email)
+
+    console.log(req.body);
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
+      },
     });
 
     if (existingUser) {
       return res.status(400).json({
         status: "error",
-        message: "Email already in use",
+        message:
+          existingUser.email === email
+            ? "Email already in use"
+            : "Username already in use",
       });
     }
 
@@ -121,6 +129,7 @@ exports.createUser = async (req, res) => {
     const newUser = await prisma.user.create({
       data: {
         name,
+        username,
         email,
         password: hashedPassword,
         phone,
