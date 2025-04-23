@@ -1,12 +1,10 @@
 const express = require("express");
 const cors = require("cors");
-const { PrismaClient } = require("@prisma/client");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -39,6 +37,12 @@ app.listen(PORT, () => {
 });
 
 module.exports = app; // Export the app for testing
+
+// Graceful shutdown
+process.on("SIGINT", async () => {
+  await prisma.$disconnect();
+  process.exit();
+});
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {

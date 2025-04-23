@@ -14,7 +14,7 @@ router
 
 router
   .route("/:id")
-  .get(transactionController.getTransactionById)
+  .get(transactionController.getTransactionsByUserId)
   .patch(restrictTo(), transactionController.updateTransaction)
   .delete(restrictTo(), transactionController.deleteTransaction);
 

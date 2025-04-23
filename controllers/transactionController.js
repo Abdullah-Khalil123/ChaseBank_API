@@ -281,3 +281,48 @@ exports.deleteTransaction = async (req, res) => {
     });
   }
 };
+
+// Get transactions by user ID
+exports.getTransactionsByUserId = async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const { limit = 10, page = 1 } = req.query;
+
+    console.log("User ID:", req.params);
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        userId: userId,
+      },
+      orderBy: { date: "desc" },
+      skip,
+      take: parseInt(limit),
+    });
+
+    // console.log("Transactions:", transactions);
+
+    // Get total count for pagination
+    const totalCount = await prisma.transaction.count({
+      where: {
+        userId: userId,
+      },
+    });
+
+    res.status(200).json({
+      status: "success",
+      results: transactions.length,
+      totalPages: Math.ceil(totalCount / parseInt(limit)),
+      currentPage: parseInt(page),
+      data: {
+        transactions,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Error fetching user transactions",
+      error: error.message,
+    });
+  }
+};
