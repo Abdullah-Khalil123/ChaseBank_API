@@ -25,7 +25,6 @@ model User {
   transactions   Transaction[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  
 }
 
 model Transaction {
@@ -43,10 +42,28 @@ model Transaction {
 
 
 enum TransactionType {
-  credit
-  debit
-  fee
-  ach
-  wire
-  other
+  ach_credit
+  ach_employee_payment
+  ach_vendor_payment
+  deposit
+  incoming_wire_transfer
+  misc_credit
+  refund
+  zelle_credit
+  ach_debit
+  atm_transaction
+  bill_payment
+  card
+  loan_payment
+  misc_debit
+  outgoing_wire_transfer
+  overnight_check
+  tax_payment
+  egift_debit
+  zelle_debit
+  account_transfer
+  adjustment_or_reversal
+  returned_deposit_item
+  checks_under_2_years
+  checks_over_2_years
 }
