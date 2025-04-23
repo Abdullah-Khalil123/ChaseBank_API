@@ -228,94 +228,62 @@ exports.updateTransaction = async (req, res) => {
       });
     }
 
-    // Recalculate balances
+    // Recalculate balance for this specific transaction
     let newBalance = user.balance;
-    const allTransactions = await prisma.transaction.findMany({
-      where: { userId: user.id },
-      orderBy: { date: "asc" }, // Ensure transactions are sorted by date
-    });
 
-    let foundUpdatedTransaction = false;
+    // Check if the transaction is being updated and adjust the balance
+    if (amount !== undefined) {
+      const updatedAmount = parseFloat(amount);
+      const updatedType = type || transaction.type; // Keep the same type if not updated
+      const updatedDate = date ? new Date(date) : transaction.date;
 
-    // Loop through all transactions and recalculate their balances
-    for (let i = 0; i < allTransactions.length; i++) {
-      const tx = allTransactions[i];
-
-      // Update the specific transaction first if it's the one being updated
-      if (tx.id === id) {
-        const updatedAmount =
-          amount !== undefined ? parseFloat(amount) : tx.amount;
-        const updatedType = type !== undefined ? type : tx.type;
-        const updatedDate = date ? new Date(date) : tx.date;
-
-        // Update the transaction
-        await prisma.transaction.update({
-          where: { id: tx.id },
-          data: {
-            description:
-              description !== undefined ? description : tx.description,
-            amount: updatedAmount,
-            type: updatedType,
-            date: updatedDate,
-          },
-        });
-
-        // Recalculate balance for this transaction
-        if (creditTypes.includes(updatedType)) {
-          newBalance -= updatedAmount;
-        } else if (debitTypes.includes(updatedType)) {
-          newBalance += updatedAmount;
-        } else if (otherTypes.includes(updatedType)) {
-          newBalance -= updatedAmount; // Or custom logic
-        } else {
-          throw new Error("Invalid transaction type");
-        }
-
-        // Update balance in the updated transaction record
-        await prisma.transaction.update({
-          where: { id: tx.id },
-          data: {
-            updatedBalance: newBalance,
-          },
-        });
-
-        foundUpdatedTransaction = true;
+      // Remove the old transaction amount from the balance first
+      if (creditTypes.includes(transaction.type)) {
+        newBalance -= transaction.amount;
+      } else if (debitTypes.includes(transaction.type)) {
+        newBalance += transaction.amount;
+      } else if (otherTypes.includes(transaction.type)) {
+        newBalance -= transaction.amount;
       }
 
-      // If the transaction has already been updated, recalculate subsequent balances
-      if (foundUpdatedTransaction && tx.id !== id) {
-        const amountToUpdate = tx.amount;
-        const updatedBalance =
-          tx.type === "credit" || tx.type === "ach" || tx.type === "wire"
-            ? newBalance + amountToUpdate
-            : tx.type === "debit" || tx.type === "fee"
-            ? newBalance - amountToUpdate
-            : newBalance + amountToUpdate; // 'other' type can be both positive or negative
-
-        // Update the balance of subsequent transactions
-        await prisma.transaction.update({
-          where: { id: tx.id },
-          data: {
-            updatedBalance: updatedBalance,
-          },
-        });
-
-        // Update newBalance for the next transaction
-        newBalance = updatedBalance;
+      // Now, add the new transaction amount to the balance
+      if (creditTypes.includes(updatedType)) {
+        newBalance += updatedAmount;
+      } else if (debitTypes.includes(updatedType)) {
+        newBalance -= updatedAmount;
+      } else if (otherTypes.includes(updatedType)) {
+        newBalance += updatedAmount; // Adjust according to custom logic
       }
+
+      // Update the transaction
+      await prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          description: description || transaction.description,
+          amount: updatedAmount,
+          type: updatedType,
+          date: updatedDate,
+          updatedBalance: newBalance, // Update balance for this transaction
+        },
+      });
+
+      // Update user's balance with the new balance
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { balance: newBalance },
+      });
+
+      res.status(200).json({
+        status: "success",
+        message: "Transaction updated and balance recalculated",
+        data: { transactionId: id, updatedBalance: newBalance },
+      });
+    } else {
+      res.status(400).json({
+        status: "error",
+        message: "Amount is required for update",
+      });
     }
-
-    // Update the user's balance in the database after recalculating all transactions
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { balance: newBalance },
-    });
-
-    res.status(200).json({
-      status: "success",
-      message: "Transaction updated and balances recalculated",
-      data: { transactionId: id, updatedBalance: newBalance },
-    });
   } catch (error) {
     res.status(500).json({
       status: "error",
