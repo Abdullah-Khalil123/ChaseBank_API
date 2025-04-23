@@ -152,7 +152,7 @@ exports.createTransaction = async (req, res) => {
         data: { balance: updatedBalance },
       });
 
-      return { newTransaction, updatedBalance };
+      return { newTransaction, updatedBalance, userId: user.id };
     });
 
     res.status(201).json({
