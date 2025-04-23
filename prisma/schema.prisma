@@ -17,7 +17,7 @@ model User {
   address        String?
   accountName    String        // Company/Business name (e.g., Abdullah PRODUCTS LLC)
   accountType    String        // Account type (e.g., BUS COMPLETE CHK)
-  // accountNumber  String?
+  accountNumber  String?
   role           Boolean       @default(false) // true for admin
   balance        Float         @default(0)
   availableCredit Float        @default(0)
