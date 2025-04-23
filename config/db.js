@@ -11,6 +11,10 @@ if (process.env.NODE_ENV === "production") {
     global.prisma = new PrismaClient();
   }
   prisma = global.prisma;
+
+  prisma.$on("query", (e) => {
+    console.log("Query: ", e.query);
+  });
 }
 
 module.exports = { prisma };
