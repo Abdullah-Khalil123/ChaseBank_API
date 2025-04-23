@@ -190,8 +190,7 @@ exports.updateUser = async (req, res) => {
     if (accountName) updateData.accountName = accountName;
     if (accountType) updateData.accountType = accountType;
     if (accountNumber) updateData.accountNumber = accountNumber;
-    if (role !== undefined)
-      updateData.role = role === "Admin" || role === true ? true : false;
+    if (role !== undefined) updateData.role = role ? true : false;
     if (balance !== undefined) updateData.balance = parseFloat(balance);
     if (availableCredit !== undefined)
       updateData.availableCredit = parseFloat(availableCredit);
