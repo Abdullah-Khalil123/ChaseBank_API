@@ -143,14 +143,21 @@ exports.createTransaction = async (req, res) => {
       });
     }
 
+    // Parse amount
+    const parsedAmount = amount ? parseFloat(amount) : 0;
+
+    // Simply use the amount as the updatedBalance (keeping it simple)
+    const updatedBalance = parsedAmount;
+
     // Prepare transaction data with defaults for missing values
     const transactionData = {
       userId: user.id,
       description: description || "Unnamed transaction", // Default description
-      amount: amount ? parseFloat(amount) : 0, // Default amount
+      amount: parsedAmount, // Default amount
       type: type || "misc_credit", // Default type
       date: date ? new Date(date) : new Date(), // Default to current date
       isPending: isPending !== undefined ? Boolean(isPending) : false, // Default to false
+      updatedBalance: updatedBalance, // Just use the transaction amount
     };
 
     // Validate amount if provided
