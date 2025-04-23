@@ -19,6 +19,7 @@ exports.getAllUsers = async (req, res) => {
         availableCredit: true,
         createdAt: true,
         updatedAt: true,
+        username: true,
       },
       orderBy: { createdAt: "desc" },
     });
