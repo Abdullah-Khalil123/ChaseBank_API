@@ -10,7 +10,7 @@
     "postinstall": "prisma generate",
     "generate": "prisma generate",
     "seed": "node prisma/seed.js",
-    "build": "npm run generate && npm run migrate && npm run start"
+    "build": "npm run generate  && npm run start"
   },
   "author": "",
   "license": "ISC",
