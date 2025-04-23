@@ -53,6 +53,7 @@ exports.getUserById = async (req, res) => {
         phone: true,
         address: true,
         accountName: true,
+        username: true,
         accountType: true,
         accountNumber: true,
         role: true,
