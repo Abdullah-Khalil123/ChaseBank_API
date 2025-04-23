@@ -20,6 +20,7 @@ exports.getAllUsers = async (req, res) => {
         createdAt: true,
         updatedAt: true,
       },
+      orderBy: { createdAt: "desc" },
     });
 
     res.status(200).json({
@@ -191,6 +192,8 @@ exports.updateUser = async (req, res) => {
     if (accountType) updateData.accountType = accountType;
     if (accountNumber) updateData.accountNumber = accountNumber;
     if (role !== undefined) updateData.role = role ? true : false;
+    // if (role !== undefined)
+    //   updateData.role = role === "Admin" || role === true ? true : false;
     if (balance !== undefined) updateData.balance = parseFloat(balance);
     if (availableCredit !== undefined)
       updateData.availableCredit = parseFloat(availableCredit);
