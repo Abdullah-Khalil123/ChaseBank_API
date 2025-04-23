@@ -1,5 +1,38 @@
 const { prisma } = require("../config/db");
 
+const creditTypes = [
+  "ach_credit",
+  "ach_employee_payment",
+  "ach_vendor_payment",
+  "deposit",
+  "incoming_wire_transfer",
+  "misc_credit",
+  "refund",
+  "zelle_credit",
+];
+
+const debitTypes = [
+  "ach_debit",
+  "atm_transaction",
+  "bill_payment",
+  "card",
+  "loan_payment",
+  "misc_debit",
+  "outgoing_wire_transfer",
+  "overnight_check",
+  "tax_payment",
+  "egift_debit",
+  "zelle_debit",
+];
+
+const otherTypes = [
+  "account_transfer",
+  "adjustment_or_reversal",
+  "returned_deposit_item",
+  "checks_under_2_years",
+  "checks_over_2_years",
+];
+
 // Get all transactions
 exports.getAllTransactions = async (req, res) => {
   try {
@@ -117,21 +150,15 @@ exports.createTransaction = async (req, res) => {
 
       // Calculate updated balance
       let updatedBalance = user.balance;
-      switch (type) {
-        case "credit":
-        case "ach":
-        case "wire":
-          updatedBalance += amountValue;
-          break;
-        case "debit":
-        case "fee":
-          updatedBalance -= amountValue;
-          break;
-        case "other":
-          updatedBalance += amountValue; // amount can be positive or negative
-          break;
-        default:
-          throw new Error("Invalid transaction type");
+
+      if (creditTypes.includes(type)) {
+        updatedBalance += amountValue;
+      } else if (debitTypes.includes(type)) {
+        updatedBalance -= amountValue;
+      } else if (otherTypes.includes(type)) {
+        updatedBalance += amountValue; // Could handle differently if needed
+      } else {
+        throw new Error("Invalid transaction type");
       }
 
       // Create transaction
@@ -234,16 +261,14 @@ exports.updateTransaction = async (req, res) => {
         });
 
         // Recalculate balance for this transaction
-        if (
-          updatedType === "credit" ||
-          updatedType === "ach" ||
-          updatedType === "wire"
-        ) {
+        if (creditTypes.includes(updatedType)) {
           newBalance += updatedAmount;
-        } else if (updatedType === "debit" || updatedType === "fee") {
+        } else if (debitTypes.includes(updatedType)) {
           newBalance -= updatedAmount;
-        } else if (updatedType === "other") {
-          newBalance += updatedAmount; // Amount could be positive or negative
+        } else if (otherTypes.includes(updatedType)) {
+          newBalance += updatedAmount; // Or custom logic
+        } else {
+          throw new Error("Invalid transaction type");
         }
 
         // Update balance in the updated transaction record
@@ -328,17 +353,14 @@ exports.deleteTransaction = async (req, res) => {
       let updatedBalance = user.balance;
 
       // Reverse the transaction effect
-      if (
-        transaction.type === "credit" ||
-        transaction.type === "ach" ||
-        transaction.type === "wire"
-      ) {
+      if (creditTypes.includes(transaction.type)) {
         updatedBalance -= transaction.amount;
-      } else if (transaction.type === "debit" || transaction.type === "fee") {
+      } else if (debitTypes.includes(transaction.type)) {
         updatedBalance += transaction.amount;
-      } else {
-        // For type 'other', reverse the effect
+      } else if (otherTypes.includes(transaction.type)) {
         updatedBalance -= transaction.amount;
+      } else {
+        throw new Error("Invalid transaction type");
       }
 
       // Delete transaction
