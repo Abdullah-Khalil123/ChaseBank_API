@@ -262,11 +262,11 @@ exports.updateTransaction = async (req, res) => {
 
         // Recalculate balance for this transaction
         if (creditTypes.includes(updatedType)) {
-          newBalance += updatedAmount;
-        } else if (debitTypes.includes(updatedType)) {
           newBalance -= updatedAmount;
+        } else if (debitTypes.includes(updatedType)) {
+          newBalance += updatedAmount;
         } else if (otherTypes.includes(updatedType)) {
-          newBalance += updatedAmount; // Or custom logic
+          newBalance -= updatedAmount; // Or custom logic
         } else {
           throw new Error("Invalid transaction type");
         }
