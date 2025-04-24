@@ -198,7 +198,8 @@ exports.createTransaction = async (req, res) => {
 exports.updateTransaction = async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, amount, type, date, isPending } = req.body;
+    const { description, amount, type, date, isPending, updatedBalance } =
+      req.body;
 
     // Find the transaction to update
     const transaction = await prisma.transaction.findUnique({
@@ -226,6 +227,16 @@ exports.updateTransaction = async (req, res) => {
         });
       }
       updateData.amount = updatedAmount;
+    }
+
+    if (updatedBalance !== undefined) {
+      const updatedBalanceValue = parseFloat(updatedBalance);
+      if (isNaN(updatedBalanceValue)) {
+        return res.status(400).json({
+          status: "error",
+          message: "Invalid updated balance format",
+        });
+      }
     }
 
     if (type !== undefined) {
